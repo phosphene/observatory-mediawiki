@@ -3,19 +3,17 @@ name: Build and Push Docker Image
 on:
   push:
     tags:
-      - 'v*.*.*'        # e.g. v1.43.2
-  push:
+      - 'v*.*.*'          # e.g. v1.43.2 → triggers versioned release
     branches:
-      - main            # push :dev tag on main commits
-  workflow_dispatch:    # manual trigger
+      - main              # e.g. main → pushes :main-dev tag
+  workflow_dispatch:
     inputs:
       tag:
-        description: 'Image tag to push (e.g. 1.43.2)'
+        description: 'Image tag override (e.g. 1.43.2-hotfix)'
         required: false
-        default: 'dev'
+        default: ''
 
 env:
-  REGISTRY: ghcr.io
   IMAGE: ghcr.io/phosphene/observatory-mediawiki
 
 jobs:
@@ -46,10 +44,14 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
+            # v1.43.2 tag → :1.43.2 and :1.43 and :latest
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=branch,suffix=-dev
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            # main branch → :main-dev
+            type=ref,event=branch,suffix=-dev
+            # manual dispatch override
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -58,22 +60,42 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # BuildKit layer cache via GHA cache
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            MW_VERSION=${{ github.ref_name == 'main' && '1.43.2' || github.ref_name }}
+            MW_VERSION=${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '1.43.2' }}
+            GIT_SHA=${{ github.sha }}
 
   security-scan:
-    name: Security Scan
+    name: Trivy CVE Scan
     runs-on: ubuntu-latest
     needs: build
+    # Only scan on versioned releases, not every main push
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
 
     steps:
-      - name: Run Trivy vulnerability scan
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/phosphene/observatory-mediawiki:latest
-          format: table
-          exit-code: '0'
+          image-ref: ${{ env.IMAGE }}:latest
+          format: sarif
+          output: trivy-results.sarif
           severity: CRITICAL,HIGH
+          exit-code: '0'       # don't fail build on findings — report only
+
+      - name: Upload scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
