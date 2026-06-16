@@ -71,7 +71,7 @@ ARG MW_VERSION
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git curl unzip patch \
+        ca-certificates git curl unzip patch \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Composer from verified official image — no curl|sh
