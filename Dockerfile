@@ -49,7 +49,7 @@ RUN set -eux; \
   rm -f /etc/apache2/sites-enabled/000-default.conf && \
   rm -f /etc/apache2/sites-available/000-default.conf && \
   rm -rf /var/www/html && \
-  a2enmod rewrite && \
+  a2enmod rewrite remoteip && \
   mkdir -p $MW_HOME $MW_LOG $MW_ORIGIN_FILES $MW_VOLUME
 
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
@@ -695,6 +695,7 @@ LABEL org.opencontainers.image.version="1.43.8" \
 COPY --from=composer $MW_HOME $MW_HOME
 COPY --from=composer $MW_ORIGIN_FILES $MW_ORIGIN_FILES
 
+COPY conf/mediawiki.conf /etc/apache2/sites-available/mediawiki.conf.template
 COPY conf/mediawiki.conf /etc/apache2/sites-available/mediawiki.conf
 COPY conf/mpm_prefork.conf /etc/apache2/mods-available/mpm_prefork.conf.template
 COPY conf/msmtprc /etc/
@@ -731,6 +732,7 @@ ENV MW_AUTOUPDATE=true \
     MW_DB_NAME=mediawiki \
     MW_DB_USER=root \
     MW_DB_INSTALLDB_USER=root \
+    APACHE_REMOTE_IP_HEADER=X-Forwarded-For \
     MW_REDIS_SERVERS=redis:6379 \
     MW_CIRRUS_SEARCH_SERVERS=elasticsearch \
     MW_ENABLE_JOB_RUNNER=true \

@@ -113,6 +113,9 @@ touch "$WWW_ROOT/.maintenance"
 # Allow for envs in the prefork config file
 envsubst < /etc/apache2/mods-available/mpm_prefork.conf.template > /etc/apache2/mods-available/mpm_prefork.conf || exit 1
 
+# Allow for envs in the mediawiki site config (e.g. APACHE_REMOTE_IP_HEADER)
+envsubst < /etc/apache2/sites-available/mediawiki.conf.template > /etc/apache2/sites-available/mediawiki.conf || exit 1
+
 ############### Run Apache ###############
 # Make sure we're not confused by old, incompletely-shutdown Apache
 # context after restarting the container.  Apache won't start correctly
