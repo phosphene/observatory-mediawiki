@@ -2,7 +2,7 @@
     "require": {
         "mediawiki/semantic-media-wiki": "6.0.1",
         "mediawiki/chameleon-skin": "5.0.0",
-        "mediawiki/bootstrap-components": "dev-master#476693d7a0f0de11bb67b775486950bff5cd1415",
+        "mediawiki/bootstrap-components": "5.2.4",
         "mediawiki/mermaid": "3.1.0",
         "mediawiki/remote-wiki": "dev-master#da859c2c5081d96a6492f178686251136d35ec23",
         "mediawiki/semantic-compound-queries": "3.0.0",
