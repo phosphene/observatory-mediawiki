@@ -46,12 +46,13 @@ RUN set -eux; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     rm -rf /var/lib/apt/lists/* /tmp/pear
 
+# Composer from official image — no curl|sh antipattern
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
 # Install Observatory extensions via composer (reproducible, versioned)
-# composer.local.json declares the Observatory-specific extension set
 COPY composer.local.json /var/www/html/composer.local.json
 RUN set -eux; \
     cd /var/www/html; \
-    # Use composer from official MW image
     composer update --no-dev --optimize-autoloader --no-interaction; \
     composer clear-cache; \
     chown -R www-data:www-data extensions vendor
