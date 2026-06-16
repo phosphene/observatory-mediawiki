@@ -712,7 +712,9 @@ COPY conf/DockerSettings.php $MW_HOME/DockerSettings.php
 COPY main/*.sh /
 COPY main/getMediawikiSettings.php /
 
-RUN a2ensite mediawiki && \
+# Create a placeholder mediawiki.conf for a2ensite (runtime envsubst overwrites it)
+RUN cp /etc/apache2/sites-available/mediawiki.conf.template /etc/apache2/sites-available/mediawiki.conf && \
+    a2ensite mediawiki && \
     chmod +x /*.sh
 
 ENV MW_AUTOUPDATE=true \
