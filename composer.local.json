@@ -1,9 +1,28 @@
 {
+    "require": {
+        "mediawiki/semantic-media-wiki": "^4.2",
+        "mediawiki/page-forms": "^5.9",
+        "mediawiki/maps": "^10.3",
+        "mediawiki/semantic-result-formats": "^4.2",
+        "mediawiki/semantic-scribunto": "^3.0",
+        "mediawiki/wiki-seo": "^3.1",
+        "mediawiki/display-title": "^3.0",
+        "mediawiki/replace-text": "^1.5",
+        "mediawiki/variables-lua": "^3.0",
+        "mediawiki/vote-ny": "^6.0",
+        "mediawiki/data-transfer": "^1.4",
+        "mediawiki/external-data": "^3.2",
+        "mediawiki/lua-sandbox": "*"
+    },
     "extra": {
         "merge-plugin": {
-            "include": [],
-            "recurse": true,
-            "replace": false
+            "include": [
+                "extensions/*/composer.json",
+                "skins/*/composer.json"
+            ],
+            "recurse": false,
+            "replace": false,
+            "merge-dev": false
         }
     }
 }
