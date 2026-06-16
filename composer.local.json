@@ -25,5 +25,15 @@
                 "extensions/AWS/composer.json"
             ]
         }
-    }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/WikiTeq/mediawiki-api-base.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/WikiTeq/mediawiki-extension-RemoteWiki"
+        }
+    ]
 }

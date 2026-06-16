@@ -682,6 +682,13 @@ COPY --from=extensions121-145 $MW_HOME/extensions/ $MW_HOME/extensions/
 COPY composer.local.json $MW_HOME/composer.local.json
 RUN set -eux; \
     cd $MW_HOME && \
+    cp composer.json composer.json.bak && \
+    cat composer.json.bak | jq '. + {"minimum-stability": "dev"}' > composer.json && \
+    rm composer.json.bak && \
+    cp composer.json composer.json.bak && \
+    cat composer.json.bak | jq '. + {"prefer-stable": true}' > composer.json && \
+    rm composer.json.bak && \
+    composer clear-cache && \
     composer update --no-dev --optimize-autoloader --no-interaction && \
     composer clear-cache && \
     cp -r $MW_HOME/. $MW_ORIGIN_FILES/ && \
