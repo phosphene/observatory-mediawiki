@@ -695,8 +695,8 @@ LABEL org.opencontainers.image.version="1.43.8" \
 COPY --from=composer $MW_HOME $MW_HOME
 COPY --from=composer $MW_ORIGIN_FILES $MW_ORIGIN_FILES
 
+
 COPY conf/mediawiki.conf /etc/apache2/sites-available/mediawiki.conf.template
-COPY conf/mediawiki.conf /etc/apache2/sites-available/mediawiki.conf
 COPY conf/mpm_prefork.conf /etc/apache2/mods-available/mpm_prefork.conf.template
 COPY conf/msmtprc /etc/
 # PHP configs — cli and apache2 (error reporting + common settings)
