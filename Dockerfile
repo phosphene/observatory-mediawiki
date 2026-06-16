@@ -698,12 +698,15 @@ COPY --from=composer $MW_ORIGIN_FILES $MW_ORIGIN_FILES
 COPY conf/mediawiki.conf /etc/apache2/sites-available/mediawiki.conf
 COPY conf/mpm_prefork.conf /etc/apache2/mods-available/mpm_prefork.conf.template
 COPY conf/msmtprc /etc/
-COPY conf/php_common_memory_limit.ini conf/php_common_upload_max_filesize.ini \
-     conf/php_common_timeouts.ini conf/php_common_luasandbox.ini \
-     conf/php_common_excimer.ini /etc/php/8.3/apache2/conf.d/
-COPY conf/php_common_memory_limit.ini conf/php_common_upload_max_filesize.ini \
-     conf/php_common_timeouts.ini conf/php_common_luasandbox.ini \
-     conf/php_common_excimer.ini /etc/php/8.3/cli/conf.d/
+# PHP configs — cli and apache2 (error reporting + common settings)
+COPY conf/php_cli_error_reporting.ini conf/php_common_memory_limit.ini \
+     conf/php_common_upload_max_filesize.ini conf/php_common_timeouts.ini \
+     conf/php_common_luasandbox.ini conf/php_common_excimer.ini \
+     /etc/php/8.3/cli/conf.d/
+COPY conf/php_apache2_error_reporting.ini conf/php_common_memory_limit.ini \
+     conf/php_common_upload_max_filesize.ini conf/php_common_timeouts.ini \
+     conf/php_common_luasandbox.ini conf/php_common_excimer.ini \
+     /etc/php/8.3/apache2/conf.d/
 COPY conf/DockerSettings.php $MW_HOME/DockerSettings.php
 COPY main/*.sh /
 COPY main/getMediawikiSettings.php /
