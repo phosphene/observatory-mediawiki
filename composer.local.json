@@ -5,14 +5,8 @@
         "mediawiki/maps": "^10.3",
         "mediawiki/semantic-result-formats": "^4.2",
         "mediawiki/semantic-scribunto": "^3.0",
-        "mediawiki/wiki-seo": "^3.1",
         "mediawiki/display-title": "^3.0",
-        "mediawiki/replace-text": "^1.5",
-        "mediawiki/variables-lua": "^3.0",
-        "mediawiki/vote-ny": "^6.0",
-        "mediawiki/data-transfer": "^1.4",
-        "mediawiki/external-data": "^3.2",
-        "mediawiki/lua-sandbox": "*"
+        "mediawiki/data-transfer": "^1.4"
     },
     "extra": {
         "merge-plugin": {
