@@ -1,14 +1,29 @@
 {
     "require": {
-        "mediawiki/semantic-media-wiki": "^4.2",
-        "mediawiki/semantic-result-formats": "^4.2",
-        "mediawiki/page-forms": "^5.9",
-        "mediawiki/maps": "^10.3",
-        "mediawiki/semantic-scribunto": "^3.0",
-        "mediawiki/display-title": "^3.0",
-        "mediawiki/data-transfer": "^1.4",
-        "mediawiki/approved-revs": "^2.0",
-        "mediawiki/comment-streams": "*",
-        "mediawiki/sub-page-list": "^3.0"
+        "mediawiki/semantic-media-wiki": "6.0.1",
+        "mediawiki/chameleon-skin": "5.0.0",
+        "mediawiki/bootstrap-components": "dev-master#476693d7a0f0de11bb67b775486950bff5cd1415",
+        "mediawiki/mermaid": "3.1.0",
+        "mediawiki/remote-wiki": "dev-master#da859c2c5081d96a6492f178686251136d35ec23",
+        "mediawiki/semantic-compound-queries": "3.0.0",
+        "mediawiki/semantic-extra-special-properties": "4.0.0",
+        "mediawiki/semantic-result-formats": "5.1.0",
+        "mediawiki/semantic-scribunto": "2.3.3",
+        "mediawiki/simple-batch-upload": "2.0.1",
+        "mediawiki/sub-page-list": "3.0.1",
+        "mediawiki/maps": "12.0.0",
+        "mediawiki/semantic-watchlist": "dev-master#63039778bf686dc1ef38eb4e9aa41ace139fdd87",
+        "psy/psysh": "^0.12.19"
+    },
+    "extra": {
+        "merge-plugin": {
+            "include": [
+                "extensions/AbuseFilter/composer.json",
+                "extensions/OATHAuth/composer.json",
+                "extensions/AntiSpoof/composer.json",
+                "extensions/CirrusSearch/composer.json",
+                "extensions/AWS/composer.json"
+            ]
+        }
     }
 }
