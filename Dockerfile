@@ -1,142 +1,150 @@
 # Observatory MediaWiki Image
-# Replaces: wikivisor/taqasta-1.43.8-observatory:latest
 # Registry: ghcr.io/phosphene/observatory-mediawiki
 #
-# Architecture: Apache on 8080 (internal) — Varnish/Traefik handles 80/443
-# Runs as www-data (non-root) — no port 80 binding needed
+# Strategy: extend the official Wikimedia MediaWiki image.
+# Community maintains the base — PHP, Apache, MW core, GPG verification.
+# We add only Observatory-specific extensions and configuration.
+#
+# Base: wikimedia/mediawiki:1.43 (php:8.3-apache, Debian bookworm)
+# MW:   1.43.x LTS (current community-maintained release)
+# PHP:  8.3 (from official PHP image)
 
-ARG MW_VERSION=1.43.2
+ARG MW_VERSION=1.43.8
 ARG GIT_SHA=unknown
 
 # ============================================================
-# Stage 1: base — runtime packages only (no build tools)
+# Stage 1: extension fetcher — pulls all Observatory extensions
+# Build tools stay here, never reach the runtime image.
 # ============================================================
-FROM debian:bookworm-slim AS base
+FROM debian:bookworm-slim AS extension-fetcher
 
-ARG DEBIAN_FRONTEND=noninteractive
-
-LABEL org.opencontainers.image.title="Observatory MediaWiki" \
-      org.opencontainers.image.source="https://github.com/phosphene/observatory-mediawiki" \
-      org.opencontainers.image.vendor="Independent Media Institute" \
-      org.opencontainers.image.licenses="GPL-2.0"
-
-ENV MW_HOME=/var/www/html/w \
-    MW_LOG=/var/log/mediawiki \
-    MW_VOLUME=/mediawiki \
-    MW_ORIGIN_FILES=/mw_origin_files \
-    WWW_USER=www-data \
-    WWW_GROUP=www-data \
-    APACHE_LOG_DIR=/var/log/apache2
-
-RUN set -eux; \
-    apt-get update && apt-get install -y --no-install-recommends \
-        apache2 \
-        libapache2-mod-php8.2 \
-        php8.2 \
-        php8.2-cli \
-        php8.2-mysql \
-        php8.2-gd \
-        php8.2-mbstring \
-        php8.2-xml \
-        php8.2-intl \
-        php8.2-opcache \
-        php8.2-apcu \
-        php8.2-redis \
-        php8.2-curl \
-        php8.2-zip \
-        imagemagick \
-        ffmpeg \
-        msmtp \
-        msmtp-mta \
-        tini \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p "${MW_HOME}" "${MW_LOG}" "${MW_VOLUME}" "${MW_ORIGIN_FILES}" \
-    # Disable default site — our config replaces it
-    && a2dissite 000-default.conf 2>/dev/null || true \
-    && a2enmod rewrite headers deflate expires \
-    # Allow www-data to write logs
-    && chown -R www-data:www-data "${MW_LOG}" /var/log/apache2 /var/run/apache2 \
-    # Apache: run on 8080, no root binding needed
-    && sed -i 's/Listen 80$//' /etc/apache2/ports.conf \
-    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' \
-        /etc/apache2/sites-available/*.conf 2>/dev/null || true
-
-# ============================================================
-# Stage 2: builder — MW core + deps (build tools stay here)
-# ============================================================
-FROM base AS builder
-
-ARG MW_VERSION
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates git curl unzip patch \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+        ca-certificates \
+        git \
+        curl \
+        unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Composer from verified official image — no curl|sh
-COPY --from=composer:2.7.6 /usr/bin/composer /usr/local/bin/composer
+WORKDIR /extensions
 
-RUN set -eux; \
-    curl -fsSL "https://releases.wikimedia.org/mediawiki/${MW_VERSION%.*}/mediawiki-${MW_VERSION}.tar.gz" \
-    | tar -xz --strip-components=1 -C "${MW_HOME}" \
-    && cp -r "${MW_HOME}/." "${MW_ORIGIN_FILES}/"
+# Clone Observatory extensions at pinned commits (reproducible builds)
+# Extensions baked into image = available even without volume mounts in CI
 
-WORKDIR ${MW_HOME}
+# --- WikiTeq / Observatory custom ---
+RUN git clone --depth=1 https://github.com/wikivisor/emailpage-observatory.git EmailPage
 
-COPY composer.local.json ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction \
-    && composer clear-cache
+# --- MediaWiki community extensions (pinned to REL1_43) ---
+RUN git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/VisualEditor && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/SemanticMediaWiki && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/PageForms && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Scribunto && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/TemplateStyles && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/TemplateData && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/WikiEditor && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/CodeEditor && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/CodeMirror && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/AdvancedSearch && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Cite && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/CiteThisPage && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/ContactPage && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/DataTransfer && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/DisplayTitle && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Gadgets && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/ImageMap && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Interwiki && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Lockdown && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/MultimediaViewer && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/NumerAlpha && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/PageImages && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/PdfHandler && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Poem && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/ReplaceText && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/TextExtracts && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Variables && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/WikiSEO && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/CirrusSearch && \
+    git clone --depth=1 -b REL1_43 https://gerrit.wikimedia.org/r/mediawiki/extensions/Elastica
+
+# Remove .git dirs — no history in the final image
+RUN find /extensions -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # ============================================================
-# Stage 3: final — lean runtime, non-root
+# Stage 2: final — official MW image + Observatory extensions
 # ============================================================
-FROM base AS final
+FROM mediawiki:${MW_VERSION}
 
 ARG MW_VERSION
 ARG GIT_SHA
 
-LABEL org.opencontainers.image.version="${MW_VERSION}" \
+LABEL org.opencontainers.image.title="Observatory MediaWiki" \
+      org.opencontainers.image.source="https://github.com/phosphene/observatory-mediawiki" \
+      org.opencontainers.image.vendor="Independent Media Institute" \
+      org.opencontainers.image.licenses="GPL-2.0" \
+      org.opencontainers.image.version="${MW_VERSION}" \
       org.opencontainers.image.revision="${GIT_SHA}"
 
-COPY --from=builder ${MW_HOME} ${MW_HOME}
-COPY --from=builder ${MW_ORIGIN_FILES} ${MW_ORIGIN_FILES}
+# Additional system packages Observatory needs beyond the base MW image
+RUN set -eux; \
+    savedAptMark="$(apt-mark showmanual)"; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        # PDF handling
+        ghostscript \
+        poppler-utils \
+        # Email relay (replaces ssmtp)
+        msmtp \
+        msmtp-mta \
+        # Video transcoding (EmbedVideo/Transcoder)
+        ffmpeg \
+        # Lua for Scribunto
+        liblua5.1-0 \
+    ; \
+    apt-mark auto '.*' > /dev/null; \
+    apt-mark manual $savedAptMark; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+    rm -rf /var/lib/apt/lists/*
 
-COPY conf/apache-mediawiki.conf /etc/apache2/sites-available/mediawiki.conf
-COPY scripts/entrypoint.sh /entrypoint.sh
-COPY scripts/run-apache.sh /run-apache.sh
+# Additional PHP extensions Observatory needs
+RUN set -eux; \
+    savedAptMark="$(apt-mark showmanual)"; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        libzip-dev \
+        libicu-dev \
+    ; \
+    docker-php-ext-install -j "$(nproc)" \
+        zip \
+    ; \
+    pecl install redis; \
+    docker-php-ext-enable redis; \
+    apt-mark auto '.*' > /dev/null; \
+    apt-mark manual $savedAptMark; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+    rm -rf /var/lib/apt/lists/* /tmp/pear
 
-RUN a2ensite mediawiki \
-    && chmod +x /entrypoint.sh /run-apache.sh \
-    && chown -R www-data:www-data "${MW_HOME}" "${MW_LOG}" "${MW_VOLUME}"
+# Copy Observatory extensions from fetcher stage
+COPY --from=extension-fetcher /extensions /var/www/html/extensions/
 
-ENV MW_VERSION=${MW_VERSION} \
-    MW_AUTOUPDATE=true \
-    MW_MAINTENANCE_UPDATE=0 \
-    MW_ENABLE_EMAIL=0 \
-    MW_ENABLE_USER_EMAIL=0 \
-    MW_ENABLE_UPLOADS=0 \
-    MW_USE_IMAGE_MAGIC=1 \
-    MW_MAIN_CACHE_TYPE=CACHE_NONE \
-    MW_DB_TYPE=mysql \
-    MW_DB_SERVER=db \
-    MW_DB_USER=mediawiki \
-    MW_CIRRUS_SEARCH_SERVERS=elasticsearch \
-    MW_ENABLE_JOB_RUNNER=true \
-    MW_JOB_RUNNER_PAUSE=2 \
+# Observatory-specific PHP config
+COPY conf/observatory-php.ini /usr/local/etc/php/conf.d/observatory.ini
+
+# Apache: allow encoded slashes (needed for some MW API calls)
+# Already set in base image for VisualEditor, confirm it's present
+RUN grep -q "AllowEncodedSlashes" /etc/apache2/sites-available/000-default.conf || \
+    sed -i "s/<\/VirtualHost>/\tAllowEncodedSlashes NoDecode\n<\/VirtualHost>/" \
+    /etc/apache2/sites-available/000-default.conf
+
+# Set correct ownership for extensions
+RUN chown -R www-data:www-data /var/www/html/extensions
+
+ENV MW_SHOW_EXCEPTION_DETAILS=false \
+    MW_DEBUG_MODE=false \
     PHP_UPLOAD_MAX_FILESIZE=50M \
     PHP_POST_MAX_SIZE=50M \
-    PHP_MEMORY_LIMIT=256M \
-    MW_SHOW_EXCEPTION_DETAILS=false \
-    MW_DEBUG_MODE=false
+    PHP_MEMORY_LIMIT=256M
 
-VOLUME ["/mediawiki"]
-
-# 8080 internally — Varnish/Traefik handles 80/443
-EXPOSE 8080
-
-# Non-root: www-data
-USER www-data
-
-ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
-CMD ["/run-apache.sh"]
+# Inherit VOLUME, EXPOSE, CMD from official base image
+# Base exposes 80 and uses apache2-foreground
