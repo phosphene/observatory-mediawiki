@@ -27,6 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /extensions
 
+RUN git config --global url."https://github.com/".insteadOf "git@github.com:" \
+    && git config --global credential.helper ""
+
 # --- Bundled in MW core (no clone needed, listed for documentation) ---
 # Cite, CiteThisPage, CodeEditor, CategoryTree, ConfirmEdit, Echo,
 # Gadgets, ImageMap, InputBox, Math, MultimediaViewer, Poem,
@@ -121,9 +124,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /skins
 
+RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
+
 RUN git clone --depth=1 -b REL1_43 https://github.com/wikimedia/mediawiki-skins-MinervaNeue MinervaNeue && rm -rf MinervaNeue/.git; \
     git clone --depth=1 -b REL1_43 https://github.com/wikimedia/mediawiki-skins-Timeless Timeless && rm -rf Timeless/.git; \
-    git clone --depth=1 https://github.com/wikimedia/mediawiki-skins-chameleon chameleon && rm -rf chameleon/.git
+    git clone --depth=1 https://github.com/ProfessionalWiki/chameleon chameleon && rm -rf chameleon/.git
 
 # ============================================================
 # Stage 3: final — official MW image + Observatory layer
