@@ -724,6 +724,11 @@ RUN cp /etc/apache2/sites-available/mediawiki.conf.template /etc/apache2/sites-a
     a2ensite mediawiki && \
     chmod +x /*.sh
 
+# Install PHPUnit for CI integration testing
+RUN curl -sL https://phar.phpunit.de/phpunit-10.phar -o /usr/local/bin/phpunit \
+    && chmod +x /usr/local/bin/phpunit \
+    && phpunit --version
+
 ENV MW_AUTOUPDATE=true \
     MW_MAINTENANCE_UPDATE=0 \
     MPM_PREFORK_START_SERVERS=5 \
