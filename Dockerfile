@@ -43,7 +43,8 @@ RUN set -eux; \
 	zip jq build-essential pkg-config && \
   pecl -d php_suffix=8.3 install luasandbox && \
   pecl -d php_suffix=8.3 install excimer && \
-  apt-get -y remove php-pear php8.3-dev liblua5.1-0-dev && \
+  apt-get -y remove php-pear php8.3-dev liblua5.1-0-dev build-essential pkg-config && \
+  apt-get -y autoremove && \
   apt-get clean && rm -rf /var/lib/apt/lists/* && \
   update-alternatives --set php /usr/bin/php8.3 && \
   rm -f /etc/apache2/sites-enabled/000-default.conf && \
@@ -79,6 +80,9 @@ RUN cd $MW_HOME/skins && \
 	&& cd Refreshed && git fetch --depth 1 origin 2570c3ee3996cd8ca3f766131b301c33695f68e6 && git checkout -q 2570c3ee3996cd8ca3f766131b301c33695f68e6 && cd ..
 
 
+# Strip .git directories to reduce image size and avoid leaking git history
+
+RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 FROM base AS extensions1-30
 RUN mkdir -p $MW_HOME/extensions
 RUN cd $MW_HOME/extensions && \
@@ -201,6 +205,9 @@ RUN cd $MW_HOME/extensions && \
 	&& cd Editcount && git fetch --depth 1 origin a81f6e9e404da0e82801fc12d91567d1cc143181 && git checkout -q a81f6e9e404da0e82801fc12d91567d1cc143181 && cd ..
 
 
+# Strip .git directories to reduce image size and avoid leaking git history
+
+RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 FROM base AS extensions31-60
 RUN mkdir -p $MW_HOME/extensions
 RUN cd $MW_HOME/extensions && \
@@ -324,6 +331,9 @@ RUN cd $MW_HOME/extensions && \
 	&& cd MyVariables && git fetch --depth 1 origin 28e21be0ff6fdc1060f5e83a130faa8406d09b0f && git checkout -q 28e21be0ff6fdc1060f5e83a130faa8406d09b0f && cd ..
 
 
+# Strip .git directories to reduce image size and avoid leaking git history
+
+RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 FROM base AS extensions61-90
 RUN mkdir -p $MW_HOME/extensions
 RUN cd $MW_HOME/extensions && \
@@ -446,6 +456,9 @@ RUN cd $MW_HOME/extensions && \
 	&& cd UserPageViewTracker && git fetch --depth 1 origin f375afc09cf381d662c75d405aa373cf6cb658cd && git checkout -q f375afc09cf381d662c75d405aa373cf6cb658cd && cd ..
 
 
+# Strip .git directories to reduce image size and avoid leaking git history
+
+RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 FROM base AS extensions91-120
 RUN mkdir -p $MW_HOME/extensions
 RUN cd $MW_HOME/extensions && \
@@ -568,6 +581,9 @@ RUN cd $MW_HOME/extensions && \
 	&& cd Survey && git fetch --depth 1 origin b0eb0fa7838827d2ce22be2fbd96ed9a6b182b7e && git checkout -q b0eb0fa7838827d2ce22be2fbd96ed9a6b182b7e && cd ..
 
 
+# Strip .git directories to reduce image size and avoid leaking git history
+
+RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 FROM base AS extensions121-145
 RUN mkdir -p $MW_HOME/extensions
 RUN cd $MW_HOME/extensions && \
@@ -670,6 +686,9 @@ RUN cd $MW_HOME/extensions && \
 	&& cd SpamRegex && git fetch --depth 1 origin 4303b01af935ef3edc6611f5038fb8052d1d61f9 && git checkout -q 4303b01af935ef3edc6611f5038fb8052d1d61f9 && cd ..
 
 
+# Strip .git directories to reduce image size and avoid leaking git history
+
+RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 FROM base AS composer
 COPY --from=core $MW_HOME $MW_HOME
 COPY --from=skins $MW_HOME/skins $MW_HOME/skins
@@ -691,8 +710,9 @@ RUN set -eux; \
     composer clear-cache && \
     composer update --no-dev --optimize-autoloader --no-interaction && \
     composer clear-cache && \
-    cp -r $MW_HOME/. $MW_ORIGIN_FILES/ && \
-    chown -R www-data:www-data $MW_HOME $MW_ORIGIN_FILES
+    find $MW_HOME -maxdepth 5 -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    find $MW_HOME -maxdepth 5 \( -name "docs" -o -name "doc" \) -type d -exec rm -rf {} + 2>/dev/null || true && \
+    chown -R www-data:www-data $MW_HOME
 
 FROM base AS final
 ARG GIT_SHA
@@ -700,7 +720,8 @@ LABEL org.opencontainers.image.version="1.43.8" \
       org.opencontainers.image.revision="${GIT_SHA}"
 
 COPY --from=composer $MW_HOME $MW_HOME
-COPY --from=composer $MW_ORIGIN_FILES $MW_ORIGIN_FILES
+# mw_origin_files removed (T-386) — keep empty dir for entrypoint compatibility
+RUN mkdir -p $MW_ORIGIN_FILES
 
 
 COPY conf/mediawiki.conf /etc/apache2/sites-available/mediawiki.conf.template
@@ -722,12 +743,18 @@ COPY main/getMediawikiSettings.php /
 # Create a placeholder mediawiki.conf for a2ensite (runtime envsubst overwrites it)
 RUN cp /etc/apache2/sites-available/mediawiki.conf.template /etc/apache2/sites-available/mediawiki.conf && \
     a2ensite mediawiki && \
+    # Apache hardening (T-386) — suppress version info
+    sed -i "s/ServerTokens OS/ServerTokens Prod/" /etc/apache2/conf-available/security.conf && \
+    sed -i "s/ServerSignature On/ServerSignature Off/" /etc/apache2/conf-available/security.conf && \
     chmod +x /*.sh
 
+ARG INSTALL_PHPUNIT=true
 # Install PHPUnit for CI integration testing
-RUN curl -sL https://phar.phpunit.de/phpunit-10.phar -o /usr/local/bin/phpunit \
+RUN if [ "$INSTALL_PHPUNIT" = "true" ]; then \
+    curl -sL https://phar.phpunit.de/phpunit-10.phar -o /usr/local/bin/phpunit \
     && chmod +x /usr/local/bin/phpunit \
-    && phpunit --version
+    && phpunit --version; \
+    fi
 
 ENV MW_AUTOUPDATE=true \
     MW_MAINTENANCE_UPDATE=0 \
@@ -762,7 +789,7 @@ VOLUME ["/mediawiki"]
 EXPOSE 80
 WORKDIR $MW_HOME
 
-HEALTHCHECK --interval=1m --timeout=10s \
+HEALTHCHECK --interval=1m --timeout=10s --start-period=120s --retries=3 \
 	CMD wget -q --method=HEAD localhost/w/api.php
 
 CMD ["/run-apache.sh"]
