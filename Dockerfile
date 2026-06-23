@@ -689,6 +689,58 @@ RUN cd $MW_HOME/extensions && \
 # Strip .git directories to reduce image size and avoid leaking git history
 
 RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# ─── T-386: Extensions required by wikivisor/LocalSettings.php but missing from image ───
+FROM base AS extensions-observatory
+RUN mkdir -p $MW_HOME/extensions
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b REL1_43 https://github.com/wikimedia/mediawiki-extensions-EditNotify EditNotify \
+	&& cd EditNotify && git fetch --depth 1 origin e3a8453f13388e0840c7e54b160a55fd49775234 && git checkout -q e3a8453f13388e0840c7e54b160a55fd49775234 && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b master https://github.com/debtcompliance/EmailPage.git EmailPage \
+	&& cd EmailPage && git fetch --depth 1 origin 7ec1d2fa56a8b3405d4c67ff8a3c5b96e4831223 && git checkout -q 7ec1d2fa56a8b3405d4c67ff8a3c5b96e4831223 && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b master https://github.com/wikimedia/mediawiki-extensions-JavascriptSlideshow JavascriptSlideshow \
+	&& cd JavascriptSlideshow && git fetch --depth 1 origin 74a77c50814a647524bdbd10c7b59dfc5943e2b5 && git checkout -q 74a77c50814a647524bdbd10c7b59dfc5943e2b5 && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b master https://github.com/DaSchTour/matomo-mediawiki-extension.git Matomo \
+	&& cd Matomo && git fetch --depth 1 origin 7cfd8167dd8527b39c3aa9ecb5fc7b3e2f90dc1c && git checkout -q 7cfd8167dd8527b39c3aa9ecb5fc7b3e2f90dc1c && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b REL1_43 https://github.com/wikimedia/mediawiki-extensions-PageMagic PageMagic \
+	&& cd PageMagic && git fetch --depth 1 origin a31c8bf8d04afd4487e7ef4479d55bcd3a9e714b && git checkout -q a31c8bf8d04afd4487e7ef4479d55bcd3a9e714b && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b REL1_43 https://github.com/wikimedia/mediawiki-extensions-PageNotice PageNotice \
+	&& cd PageNotice && git fetch --depth 1 origin 862d30f4e544632e29adc219402715f6bbaf76ff && git checkout -q 862d30f4e544632e29adc219402715f6bbaf76ff && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b master https://github.com/WikiTeq/PdfBook.git PdfBook \
+	&& cd PdfBook && git fetch --depth 1 origin 7492e435f3aa810334506e03f8d1a8010cb39037 && git checkout -q 7492e435f3aa810334506e03f8d1a8010cb39037 && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b REL1_43 https://github.com/wikimedia/mediawiki-extensions-RSS RSS \
+	&& cd RSS && git fetch --depth 1 origin aaf70e4f925c9a48855a9c84bbbffbfcce82e92e && git checkout -q aaf70e4f925c9a48855a9c84bbbffbfcce82e92e && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b REL1_43 https://github.com/wikimedia/mediawiki-extensions-SearchThumbs SearchThumbs \
+	&& cd SearchThumbs && git fetch --depth 1 origin 3ff7c2b8c42646f43609a6495db5e29fa33db832 && git checkout -q 3ff7c2b8c42646f43609a6495db5e29fa33db832 && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b main https://github.com/StarCitizenTools/mediawiki-extensions-ShortDescription.git ShortDescription \
+	&& cd ShortDescription && git fetch --depth 1 origin a6ea44f8ec3c56e21878aead27784db20b151b48 && git checkout -q a6ea44f8ec3c56e21878aead27784db20b151b48 && cd ..
+
+RUN cd $MW_HOME/extensions && \
+	git clone --depth 1 -b REL1_43 https://github.com/wikimedia/mediawiki-extensions-VipsScaler VipsScaler \
+	&& cd VipsScaler && git fetch --depth 1 origin afd1300bb90e46ec4de051c73bfc63d58e8539ff && git checkout -q afd1300bb90e46ec4de051c73bfc63d58e8539ff && cd ..
+
+# Strip .git directories to reduce image size and avoid leaking git history
+RUN find $MW_HOME -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+
 FROM base AS composer
 COPY --from=core $MW_HOME $MW_HOME
 COPY --from=skins $MW_HOME/skins $MW_HOME/skins
@@ -697,6 +749,7 @@ COPY --from=extensions31-60 $MW_HOME/extensions/ $MW_HOME/extensions/
 COPY --from=extensions61-90 $MW_HOME/extensions/ $MW_HOME/extensions/
 COPY --from=extensions91-120 $MW_HOME/extensions/ $MW_HOME/extensions/
 COPY --from=extensions121-145 $MW_HOME/extensions/ $MW_HOME/extensions/
+COPY --from=extensions-observatory $MW_HOME/extensions/ $MW_HOME/extensions/
 
 COPY composer.local.json $MW_HOME/composer.local.json
 RUN set -eux; \
