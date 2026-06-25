@@ -58,6 +58,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      imageid: ${{ steps.build.outputs.imageid }}
 
     steps:
       - name: Checkout
@@ -112,10 +114,80 @@ jobs:
           docker run --rm ${{ steps.build.outputs.imageid }} \
             test -f /var/www/mediawiki/w/DockerSettings.php
 
+  snapshot-test:
+    name: Snapshot Tests
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Rebuild with cache hit — effectively instant since layers are cached
+      - name: Load built image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: observatory-mediawiki:snapshot-test
+          cache-from: type=gha
+          build-args: |
+            MW_VERSION=1.43.8
+            GIT_SHA=${{ github.sha }}
+
+      - name: Settings validation gate
+        run: |
+          docker run --rm \
+            -e MW_SITE_NAME="Observatory" \
+            -e MW_DB_TYPE=mysql \
+            -e MW_DB_SERVER=localhost \
+            -e MW_DB_NAME=test \
+            -e MW_DB_USER=root \
+            -e MW_DB_PASS=test \
+            -e MW_ALLOW_UNMOUNTED_VOLUME=true \
+            observatory-mediawiki:snapshot-test \
+            php /getMediawikiSettings.php --version MediaWiki
+
+      - name: DockerSettings.php snapshot diff
+        run: |
+          docker run --rm observatory-mediawiki:snapshot-test \
+            cat /var/www/mediawiki/w/DockerSettings.php > /tmp/baked-dockersettings.php
+          diff conf/DockerSettings.php /tmp/baked-dockersettings.php
+
+      - name: composer.local.json snapshot diff
+        run: |
+          docker run --rm observatory-mediawiki:snapshot-test \
+            cat /var/www/mediawiki/w/composer.local.json > /tmp/baked-composer.json
+          diff <(python3 -m json.tool composer.local.json) <(python3 -m json.tool /tmp/baked-composer.json)
+
+      # PATH A (gomplate): golden master snapshot for rendered composer.wikiteq.json
+      # Gated — skips gracefully until values.yml is bootstrapped
+      - name: Render composer.wikiteq.json from template (gomplate)
+        if: hashFiles('values.yml') != ''
+        run: |
+          docker run --rm \
+            -v "$PWD/values.yml:/build/values.yml:ro" \
+            -v "$PWD/templates/composer.wikiteq.json.tmpl:/build/templates/composer.wikiteq.json.tmpl:ro" \
+            -w /build \
+            hairyhenderson/gomplate:stable \
+            --datasource values=values.yml \
+            --file templates/composer.wikiteq.json.tmpl \
+            > /tmp/rendered-composer.wikiteq.json
+
+      - name: Golden master diff — composer.wikiteq.json (gomplate)
+        if: hashFiles('values.yml') != ''
+        run: |
+          diff tests/snapshots/expected-composer.wikiteq.json /tmp/rendered-composer.wikiteq.json
+
   security-scan:
     name: Trivy CVE Scan
     runs-on: ubuntu-latest
-    needs: build
+    needs: snapshot-test
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: read
