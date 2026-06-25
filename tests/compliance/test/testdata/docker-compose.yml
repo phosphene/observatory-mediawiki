@@ -1,0 +1,53 @@
+services:
+  db:
+    image: mysql:8.4.0
+    command: --log-bin --binlog_expire_logs_seconds=259200
+    cap_add:
+      - SYS_NICE
+    environment:
+      MYSQL_ROOT_PASSWORD: compliance_root_pass
+      MYSQL_DATABASE: observatory_compliance
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pcompliance_root_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  web:
+    image: ${MW_IMAGE:-ghcr.io/phosphene/observatory-mediawiki:main-dev}
+    environment:
+      MW_SITE_NAME: "The Observatory"
+      MW_SITE_SERVER: "http://localhost"
+      MW_DB_TYPE: mysql
+      MW_DB_SERVER: db
+      MW_DB_NAME: observatory_compliance
+      MW_DB_USER: root
+      MW_DB_PASS: compliance_root_pass
+      MW_DB_INSTALLDB_USER: root
+      MW_DB_INSTALLDB_PASS: compliance_root_pass
+      MW_ADMIN_USER: ComplianceAdmin
+      MW_ADMIN_PASS: compliance_admin_pass_2026
+      MW_AUTOUPDATE: "true"
+      MW_ALLOW_UNMOUNTED_VOLUME: "true"
+      MW_MAIN_CACHE_TYPE: CACHE_NONE
+      MW_LOAD_EXTENSIONS: "ParserFunctions,WikiEditor,VisualEditor,Echo,Scribunto,LuaCache"
+      MW_LOAD_SKINS: "Vector"
+      MW_DEFAULT_SKIN: vector
+      MW_SECRET_KEY: "compliance-test-secret-key-not-for-prod"
+      FUNDRAISER_DB_PASS: ""
+    ports:
+      - "80"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider",
+             "http://localhost:80/w/api.php?action=query&meta=siteinfo&format=json"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 120s
