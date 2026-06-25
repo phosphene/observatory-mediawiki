@@ -52,6 +52,7 @@ const DOCKER_EXTENSIONS = [
 	'BreadCrumbs2',
 	'Buggy',
 	'Cargo',
+	'CategoryLockdown', // runtime-mounted custom extension (file_exists guard)
 	'CategoryTree', # bundled
 	'ChangeAuthor',
 	'CharInsert',
@@ -59,6 +60,7 @@ const DOCKER_EXTENSIONS = [
 	'CirrusSearch',
 	'Cite', # bundled
 	'CiteThisPage', # bundled
+	'CiteDrawer', // runtime-mounted custom extension (file_exists guard)
 	'Citoid',
 	'CodeEditor', # bundled
 	'CodeMirror',
@@ -84,9 +86,11 @@ const DOCKER_EXTENSIONS = [
 	'DynamicPageList4',
 	'Echo', # bundled
 	'EditAccount',
+	'EditNotify',
 	'Editcount',
 	'Elastica',
 	'EmailAuthorization',
+	'EmailPage',
 	'EmbedVideo',
 	'EventLogging',
 	'EventStreamConfig',
@@ -105,6 +109,7 @@ const DOCKER_EXTENSIONS = [
 	'ImageMap', # bundled
 	'InputBox', # bundled
 	'Interwiki', # bundled
+	'JavascriptSlideshow',
 	'JWTAuth',
 	'LDAPAuthentication2',
 	'LDAPAuthorization',
@@ -126,8 +131,10 @@ const DOCKER_EXTENSIONS = [
 	'MassMessageEmail',
 	'MassPasswordReset',
 	'Math',
+	'Matomo',
 	'MediaUploader',
 	'Mermaid',
+	'MixedNamespaceSearchSuggestions', // runtime-mounted custom extension (file_exists guard)
 	'MobileDetect',
 	'MobileFrontend',
 	'MsUpload',
@@ -145,9 +152,12 @@ const DOCKER_EXTENSIONS = [
 	'PageExchange',
 //	'PageForms',   must be enabled manually after enableSemantics()
 	'PageImages', # bundled
+	'PageMagic',
+	'PageNotice',
 	'PagePort',
 	'PageSchemas',
 	'ParserFunctions', # bundled
+	'PdfBook',
 	'PdfHandler', # bundled
 	'PluggableAuth',
 	'Poem', # bundled
@@ -157,10 +167,12 @@ const DOCKER_EXTENSIONS = [
 	'RemoteWiki',
 	'ReplaceText', # bundled
 	'RevisionSlider',
+	'RSS',
 	'RottenLinks',
 	'SandboxLink',
 	'SaveSpinner',
 	'Scribunto', # bundled
+	'SearchThumbs',
 	'SecureLinkFixer', # bundled
 	'SelectCategory',
 	'SemanticCompoundQueries',
@@ -170,6 +182,7 @@ const DOCKER_EXTENSIONS = [
 	'SemanticResultFormats',
 	'SemanticScribunto',
 	'SemanticWatchlist',
+	'ShortDescription',
 	'ShowMe',
 	'SimpleBatchUpload',
 	'SimpleChanges',
@@ -206,6 +219,7 @@ const DOCKER_EXTENSIONS = [
 	'Validator',
 	'Variables',
 	'VariablesLua',
+	'VipsScaler',
 	'VisualEditor', # bundled
 	'VoteNY',
 	'WatchAnalytics',
