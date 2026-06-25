@@ -39,7 +39,7 @@ RUN set -eux; \
 	php8.3 php8.3-mysql php8.3-cli php8.3-gd php8.3-mbstring \
 	php8.3-xml php8.3-intl php8.3-opcache php8.3-apcu \
 	php8.3-redis php8.3-curl php8.3-tidy php8.3-zip \
-	php-pear php8.3-dev liblua5.1-0 liblua5.1-0-dev \
+	php-pear php8.3-dev liblua5.1-0 liblua5.1-0-dev lua5.1 \
 	zip jq build-essential pkg-config && \
   pecl -d php_suffix=8.3 install luasandbox && \
   pecl -d php_suffix=8.3 install excimer && \
