@@ -1,0 +1,31 @@
+# hadolint configuration for observatory-mediawiki
+# This Dockerfile is a large multi-stage build (848 lines, 161 extensions).
+# Many rules that make sense for simple Dockerfiles produce false positives here.
+
+ignored:
+  # DL3008: Pin versions in apt-get install — upstream Taqasta pattern uses
+  # --no-install-recommends without pinning; pinning 50+ packages would make
+  # upstream merges impossible.
+  - DL3008
+
+  # DL3003: Use WORKDIR to switch to a directory — the Dockerfile uses cd in
+  # RUN blocks for extension clone operations; WORKDIR per-extension is not
+  # practical with 161 extensions.
+  - DL3003
+
+  # DL3059: Multiple consecutive RUN instructions — the multi-stage extension
+  # clone pattern uses parallel FROM stages with separate RUN blocks by design.
+  - DL3059
+
+  # DL3042: Avoid use of cache directory with pip — build-time pip installs
+  # use --break-system-packages in a container context where venvs add no value.
+  - DL3042
+
+  # DL4006: Set the SHELL option -o pipefail — some RUN blocks use pipes for
+  # legitimate reasons; adding pipefail everywhere would require upstream
+  # Dockerfile restructuring.
+  - DL4006
+
+  # SC2086: Double quote to prevent globbing — many git clone commands use
+  # unquoted variables deliberately (build args).
+  - SC2086
