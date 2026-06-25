@@ -1,0 +1,366 @@
+{
+  "brief": {
+    "title": "observatory-mediawiki: 7-gap improvement run",
+    "description": "Run down all 7 gaps from improvement-spec.md. Central decision: Gap 7 (gomplate adoption) drives the shape of the whole pipeline — specifically Gaps 1 and 2. We reason it out explicitly in Step 3 and commit to a path before any template or CI work begins. All implementation flows from that decision.",
+    "requester": "edphos",
+    "domain": "platform",
+    "source_refs": [
+      "phosphene/observatory-mediawiki:docs/improvement-spec",
+      "phosphene/observatory-mediawiki:docs/template-testing-spec.md",
+      "phosphene/observatory-mediawiki:fix/chameleon-v1-parity"
+    ],
+    "repo": "phosphene/observatory-mediawiki",
+    "output_branch": "feat/improvement-run-2026-06-25"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "kind": "core/validate",
+      "slug": "00-verify-gap-3-dockersettingsphp-is-copyd-into-image",
+      "title": "Verify Gap 3: DockerSettings.php is COPYd into image",
+      "instruction": "Run: docker run --rm ghcr.io/phosphene/observatory-mediawiki:main-dev grep -c 'EditNotify' /var/www/mediawiki/w/DockerSettings.php\nIf count > 0: Gap 3 RESOLVED — conf/DockerSettings.php IS the baked file. Mark COMPLETE.\nIf count == 0: Gap 3 REAL — COPY step not picking up our conf/ version. Mark FAILED.",
+      "depends_on": [],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/00-gap3-verification.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 1,
+      "kind": "core/transform",
+      "slug": "01-gap-4-add-11-observatory-extensions-to-dockerextensions",
+      "title": "Gap 4: Add 11 Observatory extensions to DOCKER_EXTENSIONS",
+      "instruction": "Edit conf/DockerSettings.php — add to DOCKER_EXTENSIONS array: EditNotify, EmailPage, JavascriptSlideshow, Matomo, PageMagic, PageNotice, PdfBook, RSS, SearchThumbs, ShortDescription (VipsScaler already present). Also add runtime-mounted extensions for documentation: MixedNamespaceSearchSuggestions, CategoryLockdown, CiteDrawer. Commit to feat/improvement-run-2026-06-25.",
+      "depends_on": [
+        0
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/01-docker-extensions-diff.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 2,
+      "kind": "core/transform",
+      "slug": "02-gap-5-remove-stale-apache-mediawikiconf",
+      "title": "Gap 5: Remove stale apache-mediawiki.conf",
+      "instruction": "Verify: grep -r 'apache-mediawiki.conf' Dockerfile — should return nothing. If unreferenced: delete conf/apache-mediawiki.conf. If referenced: fix content to match conf/mediawiki.conf instead. Commit to feat/improvement-run-2026-06-25.",
+      "depends_on": [
+        0
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/02-apache-conf-removal.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 3,
+      "kind": "core/validate",
+      "slug": "03-gap-7-gomplate-adoption-reason-it-out-and-commit-the-decision",
+      "title": "Gap 7: Gomplate adoption — reason it out and commit the decision",
+      "instruction": "Write docs/gomplate-decision.md. Choose Path A (adopt gomplate) or Path B (stay static).\n\nREASONING:\n1. conf/composer.wikiteq.json.tmpl already exists in this repo — gomplate is half-started.\n2. The Dockerfile has 145+ extensions across 6 stages. Each addition requires manually    syncing Dockerfile RUN block AND DOCKER_EXTENSIONS. Gomplate does both atomically.\n3. values.schema.json exists upstream — schema validation is free once adopted.\n4. The 11 Observatory extensions from Step 1 are the exact use case gomplate solves.\n5. values.yml bootstrap from current Dockerfile is one-time ~2h work.\n\nIf Path A: include bootstrap plan (how to extract values.yml from current Dockerfile). If Path B: document compensating controls.\n\nCommit docs/gomplate-decision.md to feat/improvement-run-2026-06-25.",
+      "depends_on": [
+        1,
+        2
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/03-gomplate-decision.md",
+        "docs/gomplate-decision.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 4,
+      "kind": "core/publish",
+      "slug": "04-gap-6-merge-fixchameleon-v1-parity",
+      "title": "Gap 6: Merge fix/chameleon-v1-parity",
+      "instruction": "Create PR from fix/chameleon-v1-parity → main on phosphene/observatory-mediawiki. Use GitHub app token (PEM: meta/github-app-temporal.pem, installation 141959311). Merge after CI passes. Output: PR URL + merge SHA.",
+      "depends_on": [
+        0
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/04-chameleon-pr.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 5,
+      "kind": "core/generate",
+      "slug": "05-gap-1a1b-ci-layer-1-static-validation-gate",
+      "title": "Gap 1a+1b: CI Layer 1 — static validation gate",
+      "instruction": "Read steps/03-gomplate-decision.md for chosen path. Add 'validate' job to .github/workflows/build-push.yml before 'build'.\nALL PATHS: php -l conf/DockerSettings.php, python3 -m json.tool composer.local.json, hadolint Dockerfile.\nPATH A ONLY: ./validate.sh, gomplate dry-run diff vs snapshot.\nPATH B ONLY: DOCKER_EXTENSIONS completeness script.\nBOTH: Path B symlink assertions post-build.\nCommit to feat/improvement-run-2026-06-25.",
+      "depends_on": [
+        3,
+        4
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/05-ci-layer1-diff.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 6,
+      "kind": "core/generate",
+      "slug": "06-gap-1b-ci-layer-2-snapshot-test-job",
+      "title": "Gap 1b: CI Layer 2 — snapshot test job",
+      "instruction": "Add 'snapshot-test' job after 'build', before 'push'. Diffs baked DockerSettings.php and composer.local.json vs source. Runs settings validation gate: php /getMediawikiSettings.php --version MediaWiki. PATH A: also diff rendered composer.wikiteq.json vs golden master. Commit to feat/improvement-run-2026-06-25.",
+      "depends_on": [
+        5
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/06-ci-layer2-diff.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 7,
+      "kind": "core/generate",
+      "slug": "07-gap-1c-port-bdd-compliance-suite-to-observatory-mediawiki",
+      "title": "Gap 1c: Port BDD compliance suite to observatory-mediawiki",
+      "instruction": "Copy observatory-magazine-v2/tests/compliance/ to tests/compliance/ in this repo. Adjust: go.mod module path, docker-compose.yml to use this image directly, README paths. Add 'compliance' job to build-push.yml after 'snapshot-test', before 'push'. Commit to feat/improvement-run-2026-06-25.",
+      "depends_on": [
+        6
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/07-compliance-suite.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    },
+    {
+      "index": 8,
+      "kind": "core/publish",
+      "slug": "08-final-create-pr-trigger-image-build",
+      "title": "Final: create PR + trigger image build",
+      "instruction": "Create PR feat/improvement-run-2026-06-25 → main on phosphene/observatory-mediawiki. Title: 'feat: 7-gap improvement run — CI pipeline, extensions, gomplate decision'. Body summarises all gap outcomes. Use GitHub app token. Output: PR URL.",
+      "depends_on": [
+        7
+      ],
+      "inputs": {},
+      "expected_outputs": [
+        "steps/08-final-pr.md"
+      ],
+      "timeout_hint_seconds": 300,
+      "expected_duration_seconds": null,
+      "retryable": true,
+      "max_attempts": 3,
+      "retry_after_seconds": 0,
+      "checkpoint_schema": null,
+      "notes": null
+    }
+  ],
+  "step_states": [
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    },
+    {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "failed_at": null,
+      "skipped_at": null,
+      "blocked_at": null,
+      "output_paths": [],
+      "output_metadata": {},
+      "error": null,
+      "attempts": 0,
+      "checkpoint": {},
+      "eta": null,
+      "mutations": [],
+      "child_session_key": null,
+      "agent_trace": []
+    }
+  ],
+  "output_dir": "/home/node/.openclaw/workspace/drafts/platform/observatory-mediawiki-improvements",
+  "created_at": "2026-06-25T12:34:19.366623Z",
+  "updated_at": "2026-06-25T12:34:19.366629Z",
+  "final_path": null
+}
