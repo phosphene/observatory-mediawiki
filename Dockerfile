@@ -53,6 +53,20 @@ RUN set -eux; \
   a2enmod rewrite remoteip && \
   mkdir -p $MW_HOME $MW_LOG $MW_ORIGIN_FILES $MW_VOLUME
 
+
+# -------------------------------------------------------------------------
+# Document Export Binaries: Pandoc + wkhtmltopdf
+# -------------------------------------------------------------------------
+# WHAT: Install pandoc and wkhtmltopdf for PDF/EPUB/Markdown export.
+# WHY: DownloadBook calls pandoc. PdfBook calls wkhtmltopdf.
+#       Without these, "Download as PDF" fails.
+# SECURITY BOUNDARY: Read-only converters, no escalation.
+# -------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pandoc \
+    wkhtmltopdf \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     composer self-update 2.10.1
 
