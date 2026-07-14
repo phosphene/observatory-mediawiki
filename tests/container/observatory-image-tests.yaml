@@ -1,0 +1,83 @@
+# Container Structure Tests for ghcr.io/phosphene/observatory-mediawiki
+#
+# These are acceptance tests for the built Docker image.
+# They prove the runtime environment has what the code needs.
+# Run with: container-structure-test test --image ghcr.io/phosphene/observatory-mediawiki:TAG --config tests/container/observatory-image-tests.yaml
+
+schemaVersion: "2.0.0"
+
+# 1. Critical binaries must be present and executable
+commandTests:
+  - name: "Pandoc installed and executable"
+    command: "pandoc"
+    args: ["--version"]
+    expectedOutput: ["pandoc"]
+    exitCode: 0
+
+  - name: "wkhtmltopdf installed and executable"
+    command: "wkhtmltopdf"
+    args: ["--version"]
+    expectedOutput: ["wkhtmltopdf"]
+    exitCode: 0
+
+  - name: "Pandoc converts HTML to PDF"
+    setup: [["sh", "-c", "echo '<h1>Contract Test</h1><p>If you can read this, Pandoc works.</p>' > /tmp/pandoc-test.html"]]
+    command: "pandoc"
+    args: ["/tmp/pandoc-test.html", "-o", "/tmp/pandoc-test.pdf"]
+    exitCode: 0
+
+  - name: "Pandoc converts HTML to EPUB"
+    setup: [["sh", "-c", "echo '<h1>EPUB Test</h1>' > /tmp/epub-test.html"]]
+    command: "pandoc"
+    args: ["/tmp/epub-test.html", "-o", "/tmp/epub-test.epub"]
+    exitCode: 0
+
+  - name: "PHP available"
+    command: "php"
+    args: ["-v"]
+    expectedOutput: ["PHP 8.3"]
+    exitCode: 0
+
+  - name: "Lua sandbox available"
+    command: "php"
+    args: ["-m"]
+    expectedOutput: ["luasandbox"]
+    exitCode: 0
+
+  - name: "Apache available"
+    command: "apache2"
+    args: ["-v"]
+    expectedOutput: ["Apache"]
+    exitCode: 0
+
+  - name: "ImageMagick available"
+    command: "convert"
+    args: ["--version"]
+    expectedOutput: ["ImageMagick"]
+    exitCode: 0
+
+# 2. Critical files must exist
+fileExistenceTests:
+  - name: "MediaWiki entry point"
+    path: "/var/www/mediawiki/w/index.php"
+    shouldExist: true
+
+  - name: "LocalSettings include point"
+    path: "/var/www/mediawiki/w/LocalSettings.php"
+    shouldExist: true
+
+  - name: "Scribunto Lua binary"
+    path: "/usr/bin/lua5.1"
+    shouldExist: true
+
+  - name: "DownloadBook extension"
+    path: "/var/www/mediawiki/w/extensions/DownloadBook"
+    shouldExist: true
+
+# 3. Metadata checks
+metadataTest:
+  env:
+    - key: "MW_HOME"
+      value: "/var/www/mediawiki/w"
+    - key: "WWW_ROOT"
+      value: "/var/www/mediawiki"
