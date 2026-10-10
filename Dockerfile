@@ -33,7 +33,7 @@ RUN set -eux; \
   echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list && \
   apt-get update && \
   apt-get install -y --no-install-recommends \
-	git apache2 gpg imagemagick librsvg2-bin python3-pygments \
+	git apache2 gpg imagemagick libvips-tools librsvg2-bin python3-pygments \
 	msmtp msmtp-mta patch ffmpeg curl unzip gnupg \
 	default-mysql-client rsync poppler-utils gettext-base \
 	php8.3 php8.3-mysql php8.3-cli php8.3-gd php8.3-mbstring \
